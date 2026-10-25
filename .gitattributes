@@ -1,0 +1,16 @@
+# 统一的换行符处理：仓库里存 LF，Windows 工作区按需检出 CRLF。
+# 批处理文件必须是 CRLF，否则 cmd 解析 goto/label 时可能出错。
+* text=auto
+
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.sh text eol=lf
+
+# 二进制文件不要做换行符转换
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.woff binary
+*.woff2 binary

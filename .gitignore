@@ -43,3 +43,13 @@ pnpm-debug.log*
 # 系统文件
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Windows 快捷方式：里面记的是本机绝对路径，换电脑用
+# scripts/create-shortcut.ps1 重新生成，不要提交
+*.lnk
+
+# 从应用里导出的日记备份：属于私人内容，别提交到仓库
+写给自己-*.md
+写给自己-*.json
+

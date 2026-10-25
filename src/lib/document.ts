@@ -4,6 +4,14 @@ import { countWords, formatNumber } from "./text";
 
 export const NOTE_TITLE = "写给自己";
 
+/**
+ * Windows 上保存的 .md 使用 CRLF 换行，浏览器里的文本框使用 LF。
+ * 统一成 LF，避免同一篇日记在两种系统之间来回导入后混入 \r。
+ */
+function normalizeContent(value: string): string {
+  return value.replace(/\r\n?/g, "\n");
+}
+
 export function createEmptyDocument(now = new Date()): NoteDocument {
   const timestamp = now.toISOString();
   return {
@@ -59,12 +67,13 @@ export function normalizeDocument(value: unknown): NoteDocument {
     if (!isValidDateKey(date)) continue;
     if (typeof entry.content !== "string" || !entry.content.trim()) continue;
 
+    const content = normalizeContent(entry.content).trim();
     const createdAt = safeTimestamp(entry.createdAt, now);
     const updatedAt = safeTimestamp(entry.updatedAt, createdAt);
     const existing = entryMap.get(date);
 
     if (existing) {
-      existing.content = `${existing.content.trimEnd()}\n\n${entry.content.trim()}`;
+      existing.content = `${existing.content.trimEnd()}\n\n${content}`;
       existing.createdAt =
         Date.parse(existing.createdAt) <= Date.parse(createdAt)
           ? existing.createdAt
@@ -76,7 +85,7 @@ export function normalizeDocument(value: unknown): NoteDocument {
     } else {
       entryMap.set(date, {
         date,
-        content: entry.content.trim(),
+        content,
         createdAt,
         updatedAt,
       });
@@ -132,7 +141,7 @@ export function notebookToMarkdown(
       `<!-- to-myself:${entry.date} -->`,
       `## ${dateLabel}`,
       "",
-      entry.content.trim(),
+      normalizeContent(entry.content).trim(),
     ].join("\n");
   });
 
@@ -191,7 +200,9 @@ function parseMarkdownSections(markdown: string): Array<{
 }
 
 export function parseMarkdownBackup(markdown: string): NoteDocument {
-  const sections = parseMarkdownSections(markdown.replace(/^\uFEFF/, ""));
+  const sections = parseMarkdownSections(
+    normalizeContent(markdown.replace(/^\uFEFF/, "")),
+  );
 
   if (sections.length === 0) {
     throw new Error(
