@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * 写给自己 · Windows 本地启动器
+ * 写给自己 · 本地启动器（Windows / Linux / macOS）
  *
  * 零依赖静态服务器：构建一次 `dist/`，然后用它当本地小应用打开，
  * 不需要 Vite 开发服务器，也不需要联网。
  *
  * 用法：
- *   node scripts/serve-dist.mjs                # 需要时自动构建，然后打开浏览器窗口
- *   node scripts/serve-dist.mjs --no-open      # 只启动服务器
+ *   node scripts/serve-dist.mjs                # 需要时自动构建，然后打开浏览器
+ *   node scripts/serve-dist.mjs --no-open      # 只启动服务器，不打开浏览器
  *   node scripts/serve-dist.mjs --build        # 强制重新构建
  *   node scripts/serve-dist.mjs --port 4300    # 换端口（换端口等于换站点，看不到原来的笔记）
  *   node scripts/serve-dist.mjs --host 0.0.0.0 # 允许同一局域网的手机访问
@@ -144,27 +144,42 @@ function findEdge() {
 function openUrl(url) {
   if (!shouldOpen) return;
 
+  // 没有图形界面（常见的 WSL）时，xdg-open / Edge 可能根本不存在。
+  // 这里只警告，不让打不开浏览器把整个日记服务带崩。
+  const warn = () => {
+    console.warn(
+      `\n  ! 没能自动打开浏览器，请手动访问：${url}\n` +
+        `    （无图形界面的 WSL 可以加 --no-open 跳过这一步）\n`,
+    );
+  };
+
+  const launch = (command, args, options = {}) => {
+    try {
+      const child = spawn(command, args, {
+        detached: true,
+        stdio: "ignore",
+        ...options,
+      });
+      child.on("error", warn);
+      child.unref();
+    } catch {
+      warn();
+    }
+  };
+
   const edge = findEdge();
   if (edge && useAppWindow) {
     // Edge 的 --app 模式去掉地址栏和标签页，用起来更像桌面笔记应用。
-    spawn(edge, [`--app=${url}`, "--window-size=1280,920"], {
-      detached: true,
-      stdio: "ignore",
-    }).unref();
+    launch(edge, [`--app=${url}`, "--window-size=1280,920"]);
     return;
   }
 
   if (process.platform === "win32") {
-    spawn("cmd", ["/c", "start", "", url], {
-      detached: true,
-      stdio: "ignore",
-      windowsHide: true,
-    }).unref();
+    launch("cmd", ["/c", "start", "", url], { windowsHide: true });
     return;
   }
 
-  const command = process.platform === "darwin" ? "open" : "xdg-open";
-  spawn(command, [url], { detached: true, stdio: "ignore" }).unref();
+  launch(process.platform === "darwin" ? "open" : "xdg-open", [url]);
 }
 
 function lanAddresses() {
